@@ -80,6 +80,8 @@
 #include "shuffle.h"
 #include "page_reporting.h"
 
+#include <my_ballooning/my_ballooning.h>
+
 /* Free Page Internal flags: for internal, non-pcp variants of free_pages(). */
 typedef int __bitwise fpi_t;
 
@@ -4984,6 +4986,11 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order, int preferred_nid,
 	alloc_mask = gfp_mask;
 	if (!prepare_alloc_pages(gfp_mask, order, preferred_nid, nodemask, &ac, &alloc_mask, &alloc_flags))
 		return NULL;
+
+	if(nr_free_pages() < MY_BALLOONING_THRESHOLD_MIN_PAGES)
+	{
+		my_ballooning_handle_low_memory();
+	}
 
 	/*
 	 * Forbid the first pass from falling back to types that fragment

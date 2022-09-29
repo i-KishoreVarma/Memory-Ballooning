@@ -446,3 +446,5 @@
 439	i386	faccessat2		sys_faccessat2
 440	i386	process_madvise		sys_process_madvise
 441	i386	epoll_pwait2		sys_epoll_pwait2		compat_sys_epoll_pwait2
+442	i386	register_my_ballooning			sys_register_my_ballooning
+443 i386    my_ballooning_advise            sys_my_ballooning_advise

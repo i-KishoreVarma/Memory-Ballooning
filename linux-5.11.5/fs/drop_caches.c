@@ -10,6 +10,7 @@
 #include <linux/sysctl.h>
 #include <linux/gfp.h>
 #include "internal.h"
+#include <my_ballooning/mb_drop_caches.h>
 
 /* A global variable is a bit ugly, but it keeps the code simple */
 int sysctl_drop_caches;
@@ -73,4 +74,13 @@ int drop_caches_sysctl_handler(struct ctl_table *table, int write,
 		stfu |= sysctl_drop_caches & 4;
 	}
 	return 0;
+}
+
+
+void mb_drop_caches(void)
+{
+	iterate_supers(drop_pagecache_sb, NULL);
+	count_vm_event(DROP_PAGECACHE);
+	drop_slab();
+	count_vm_event(DROP_SLAB);
 }

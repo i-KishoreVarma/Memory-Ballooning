@@ -862,8 +862,14 @@ __SYSCALL(__NR_process_madvise, sys_process_madvise)
 #define __NR_epoll_pwait2 441
 __SC_COMP(__NR_epoll_pwait2, sys_epoll_pwait2, compat_sys_epoll_pwait2)
 
+#define __NR_register_my_ballooning 442
+__SYSCALL(__NR_register_my_ballooning,sys_register_my_ballooning)
+
+#define __NR_my_ballooning_advise 443
+__SYSCALL(__NR_my_ballooning_advise,sys_my_ballooning_advise)
+
 #undef __NR_syscalls
-#define __NR_syscalls 442
+#define __NR_syscalls 444
 
 /*
  * 32 bit systems traditionally used different

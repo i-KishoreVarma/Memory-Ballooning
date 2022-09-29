@@ -58,6 +58,8 @@
 
 #include "internal.h"
 
+#include <my_ballooning/my_ballooning.h>
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/vmscan.h>
 
@@ -166,6 +168,8 @@ struct scan_control {
 
 /*
  * From 0 .. 200.  Higher means more swappy.
+ *
+ * Changed from 60 to 0 to disable swapping
  */
 int vm_swappiness = 60;
 
@@ -795,6 +799,12 @@ static pageout_t pageout(struct page *page, struct address_space *mapping)
 	 */
 	if (!is_page_cache_freeable(page))
 		return PAGE_KEEP;
+	
+	// if(PageAnon(page)&&!check_valid_process(page))
+	// {
+	// 	return PAGE_KEEP;
+	// }
+	
 	if (!mapping) {
 		/*
 		 * Some data journaling orphaned pages can have
@@ -2273,6 +2283,16 @@ static void get_scan_count(struct lruvec *lruvec, struct scan_control *sc,
 		goto out;
 	}
 
+	/* 
+	 * Swapping of anon is Disabled for all other Process that are not 
+	 * registered, only chance is to swap/remove file backed pages.
+	 */
+	if(my_ballooning_disabled_annon_swapping())
+	{
+		scan_balance = SCAN_FILE;
+		goto out;
+	}
+
 	/*
 	 * Do not apply any pressure balancing cleverness when the
 	 * system is close to OOM, scan both anon and file equally
@@ -2442,6 +2462,16 @@ static void shrink_lruvec(struct lruvec *lruvec, struct scan_control *sc)
 	struct blk_plug plug;
 	bool scan_adjusted;
 
+	// struct scan_control new_sc = {
+	// 	.nr_to_reclaim = nr_to_reclaim,
+	// 	.gfp_mask = GFP_HIGHUSER_MOVABLE,
+	// 	.reclaim_idx = MAX_NR_ZONES - 1,
+	// 	.priority = DEF_PRIORITY,
+	// 	.may_writepage = 0,
+	// 	.may_unmap = 0,
+	// 	.may_swap = 1,
+	// };
+
 	get_scan_count(lruvec, sc, nr);
 
 	/* Record the original scan target for proportional adjustments later */
@@ -2476,6 +2506,13 @@ static void shrink_lruvec(struct lruvec *lruvec, struct scan_control *sc)
 							    lruvec, sc);
 			}
 		}
+
+		// if(my_ballooning_active()) {
+		// 	nr_reclaimed += shrink_list(LRU_INACTIVE_ANON, min(max(nr_to_reclaim,4*SWAP_CLUSTER_MAX), 128*SWAP_CLUSTER_MAX),
+		// 					    lruvec, &new_sc);
+										
+		// }
+
 
 		cond_resched();
 
@@ -4036,6 +4073,34 @@ unsigned long shrink_all_memory(unsigned long nr_to_reclaim)
 	return nr_reclaimed;
 }
 #endif /* CONFIG_HIBERNATION */
+
+unsigned long my_ballooing_shrink_all_memory(unsigned long nr_to_reclaim)
+{
+	struct scan_control sc = {
+		.nr_to_reclaim = nr_to_reclaim,
+		.gfp_mask = GFP_HIGHUSER_MOVABLE,
+		.reclaim_idx = MAX_NR_ZONES - 1,
+		.priority = DEF_PRIORITY,
+		.may_writepage = 0,
+		.may_unmap = 0,
+		.may_swap = 1,
+	};
+	struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
+	unsigned long nr_reclaimed;
+	unsigned int noreclaim_flag;
+
+	fs_reclaim_acquire(sc.gfp_mask);
+	noreclaim_flag = memalloc_noreclaim_save();
+	set_task_reclaim_state(current, &sc.reclaim_state);
+
+	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
+
+	set_task_reclaim_state(current, NULL);
+	memalloc_noreclaim_restore(noreclaim_flag);
+	fs_reclaim_release(sc.gfp_mask);
+
+	return nr_reclaimed;
+}
 
 /*
  * This kswapd start function will be called by init and node-hot-add.

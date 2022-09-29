@@ -83,6 +83,8 @@
 #include <asm/tlb.h>
 #include <asm/tlbflush.h>
 
+#include <my_ballooning/my_ballooning.h>
+
 #include "pgalloc-track.h"
 #include "internal.h"
 
@@ -1273,6 +1275,16 @@ again:
 		}
 
 		entry = pte_to_swp_entry(ptent);
+
+		unsigned long tt = swp_type(entry);
+		
+		if(tt==MAX_SWAPFILES)
+		{
+			rss[MM_SWAPENTS]--;
+			pte_clear_not_present_full(mm, addr, pte, tlb->fullmm);
+			continue;
+		}
+
 		if (is_device_private_entry(entry)) {
 			struct page *page = device_private_entry_to_page(entry);
 
@@ -3261,11 +3273,17 @@ vm_fault_t do_swap_page(struct vm_fault *vmf)
 	int exclusive = 0;
 	vm_fault_t ret = 0;
 	void *shadow = NULL;
+	vm_fault_t tttt;
 
 	if (!pte_unmap_same(vma->vm_mm, vmf->pmd, vmf->pte, vmf->orig_pte))
 		goto out;
 
 	entry = pte_to_swp_entry(vmf->orig_pte);
+	
+	tttt = mb_swapin_page(vmf);
+	if(tttt)
+		return 0;
+
 	if (unlikely(non_swap_entry(entry))) {
 		if (is_migration_entry(entry)) {
 			migration_entry_wait(vma->vm_mm, vmf->pmd,

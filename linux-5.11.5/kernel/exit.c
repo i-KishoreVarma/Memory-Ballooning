@@ -68,6 +68,7 @@
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
 #include <asm/mmu_context.h>
+#include <my_ballooning/my_ballooning.h>
 
 static void __unhash_process(struct task_struct *p, bool group_dead)
 {
@@ -735,6 +736,8 @@ void __noreturn do_exit(long code)
 	 * Then fix up important state like USER_DS and preemption.
 	 * Then do everything else.
 	 */
+
+	deregister_if_registered(tsk);
 
 	WARN_ON(blk_needs_flush_plug(tsk));
 

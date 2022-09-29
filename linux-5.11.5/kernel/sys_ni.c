@@ -473,3 +473,8 @@ COND_SYSCALL(setuid16);
 
 /* restartable sequence */
 COND_SYSCALL(rseq);
+
+/* my_ballooning/my_ballooning.c */
+COND_SYSCALL(sys_register_my_ballooning);
+COND_SYSCALL(sys_my_ballooning_advise);
+

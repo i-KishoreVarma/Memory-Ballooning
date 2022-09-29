@@ -406,5 +406,9 @@
 545	x32	execveat		compat_sys_execveat
 546	x32	preadv2			compat_sys_preadv64v2
 547	x32	pwritev2		compat_sys_pwritev64v2
+
+548	common	register_my_ballooning			sys_register_my_ballooning
+549 common  my_ballooning_advise            sys_my_ballooning_advise
+
 # This is the end of the legacy x32 range.  Numbers 548 and above are
 # not special and are not to be used for x32-specific syscalls.
